@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlogSpace | Create Blog</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page="create">
+  <div id="navbar"></div>
+
+  <main class="container narrow">
+    <form id="blogForm" class="card form">
+      <h2>Create Blog</h2>
+      <p id="msg" class="msg"></p>
+
+      <label for="title">Title</label>
+      <input type="text" id="title" placeholder="Blog title" required />
+
+      <label for="category">Category</label>
+      <select id="category" required>
+        <option value="">Select category</option>
+        <option>Technology</option>
+        <option>Lifestyle</option>
+        <option>Education</option>
+        <option>Travel</option>
+        <option>Other</option>
+      </select>
+
+      <label for="content">Content</label>
+      <textarea id="content" rows="8" placeholder="Write your blog here..." required></textarea>
+
+      <button type="submit" class="btn full">Publish</button>
+    </form>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
