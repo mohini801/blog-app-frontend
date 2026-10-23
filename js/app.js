@@ -1,13 +1,28 @@
-/* ---------- Storage helpers (localStorage; backend will replace this in Module 2) ---------- */
-const store = {
-  getUsers: () => JSON.parse(localStorage.getItem("users") || "[]"),
-  setUsers: (u) => localStorage.setItem("users", JSON.stringify(u)),
-  getBlogs: () => JSON.parse(localStorage.getItem("blogs") || "[]"),
-  setBlogs: (b) => localStorage.setItem("blogs", JSON.stringify(b)),
+/* ---------- Config ---------- */
+const API = "http://localhost:5000/api";
+
+/* ---------- Session helpers (only the logged-in user is kept in the browser) ---------- */
+const session = {
   getCurrent: () => JSON.parse(localStorage.getItem("currentUser") || "null"),
   setCurrent: (u) => localStorage.setItem("currentUser", JSON.stringify(u)),
   logout: () => localStorage.removeItem("currentUser"),
 };
+
+/* ---------- API helper ---------- */
+async function api(path, options = {}) {
+  let res;
+  try {
+    res = await fetch(API + path, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+  } catch (err) {
+    throw new Error("Cannot connect to server. Is the backend running?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Something went wrong.");
+  return data;
+}
 
 /* ---------- Utilities ---------- */
 function escapeHTML(str) {
@@ -28,14 +43,14 @@ function blogCard(b) {
     <article class="card blog">
       <span class="tag">${escapeHTML(b.category)}</span>
       <h3>${escapeHTML(b.title)}</h3>
-      <p class="meta">By ${escapeHTML(b.author)} &bull; ${b.date}</p>
+      <p class="meta">By ${escapeHTML(b.author)} &bull; ${escapeHTML(b.date)}</p>
       <p>${escapeHTML(excerpt)}</p>
     </article>`;
 }
 
 /* ---------- Navbar ---------- */
 function renderNavbar() {
-  const user = store.getCurrent();
+  const user = session.getCurrent();
   const links = user
     ? `<a href="index.html">Home</a>
        <a href="dashboard.html">Dashboard</a>
@@ -54,7 +69,7 @@ function renderNavbar() {
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      store.logout();
+      session.logout();
       window.location.href = "login.html";
     });
   }
@@ -62,89 +77,106 @@ function renderNavbar() {
 
 /* ---------- Route protection ---------- */
 function requireLogin() {
-  if (!store.getCurrent()) window.location.href = "login.html";
+  if (!session.getCurrent()) window.location.href = "login.html";
 }
 
 /* ---------- Pages ---------- */
-function initHome() {
+async function initHome() {
   const list = document.getElementById("blogList");
-  const blogs = store.getBlogs().slice().reverse();
-  list.innerHTML = blogs.length
-    ? blogs.map(blogCard).join("")
-    : `<p class="empty">No blogs yet. Be the first to write one!</p>`;
+  try {
+    const blogs = await api("/blogs");
+    list.innerHTML = blogs.length
+      ? blogs.map(blogCard).join("")
+      : `<p class="empty">No blogs yet. Be the first to write one!</p>`;
+  } catch (err) {
+    list.innerHTML = `<p class="empty">${escapeHTML(err.message)}</p>`;
+  }
 }
 
 function initRegister() {
-  document.getElementById("registerForm").addEventListener("submit", (e) => {
+  document.getElementById("registerForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = document.getElementById("name").value.trim();
-    const email = document.getElementById("email").value.trim().toLowerCase();
+    const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const confirm = document.getElementById("confirm").value;
 
     if (password !== confirm) return showMsg("Passwords do not match.", "error");
 
-    const users = store.getUsers();
-    if (users.some((u) => u.email === email)) {
-      return showMsg("Email already registered.", "error");
+    try {
+      await api("/register", {
+        method: "POST",
+        body: JSON.stringify({ name, email, password }),
+      });
+      showMsg("Registered successfully! Redirecting to login...", "success");
+      setTimeout(() => (window.location.href = "login.html"), 1000);
+    } catch (err) {
+      showMsg(err.message, "error");
     }
-
-    users.push({ id: Date.now(), name, email, password });
-    store.setUsers(users);
-    showMsg("Registered successfully! Redirecting to login...", "success");
-    setTimeout(() => (window.location.href = "login.html"), 1000);
   });
 }
 
 function initLogin() {
-  if (store.getCurrent()) window.location.href = "dashboard.html";
+  if (session.getCurrent()) window.location.href = "dashboard.html";
 
-  document.getElementById("loginForm").addEventListener("submit", (e) => {
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = document.getElementById("email").value.trim().toLowerCase();
+    const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
 
-    const user = store.getUsers().find((u) => u.email === email && u.password === password);
-    if (!user) return showMsg("Invalid email or password.", "error");
-
-    store.setCurrent({ id: user.id, name: user.name, email: user.email });
-    window.location.href = "dashboard.html";
+    try {
+      const data = await api("/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      session.setCurrent(data.user);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      showMsg(err.message, "error");
+    }
   });
 }
 
-function initDashboard() {
+async function initDashboard() {
   requireLogin();
-  const user = store.getCurrent();
+  const user = session.getCurrent();
   if (!user) return;
 
   document.getElementById("welcome").textContent = "Welcome, " + user.name;
-  const mine = store.getBlogs().filter((b) => b.authorId === user.id).reverse();
-  document.getElementById("blogCount").textContent = mine.length;
-  document.getElementById("myBlogs").innerHTML = mine.length
-    ? mine.map(blogCard).join("")
-    : `<p class="empty">You have not written any blogs yet.</p>`;
+  const box = document.getElementById("myBlogs");
+  try {
+    const mine = await api("/blogs/user/" + user.id);
+    document.getElementById("blogCount").textContent = mine.length;
+    box.innerHTML = mine.length
+      ? mine.map(blogCard).join("")
+      : `<p class="empty">You have not written any blogs yet.</p>`;
+  } catch (err) {
+    box.innerHTML = `<p class="empty">${escapeHTML(err.message)}</p>`;
+  }
 }
 
 function initCreate() {
   requireLogin();
-  const user = store.getCurrent();
+  const user = session.getCurrent();
   if (!user) return;
 
-  document.getElementById("blogForm").addEventListener("submit", (e) => {
+  document.getElementById("blogForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const blogs = store.getBlogs();
-    blogs.push({
-      id: Date.now(),
-      title: document.getElementById("title").value.trim(),
-      category: document.getElementById("category").value,
-      content: document.getElementById("content").value.trim(),
-      author: user.name,
-      authorId: user.id,
-      date: new Date().toLocaleDateString(),
-    });
-    store.setBlogs(blogs);
-    showMsg("Blog published! Redirecting...", "success");
-    setTimeout(() => (window.location.href = "dashboard.html"), 800);
+    try {
+      await api("/blogs", {
+        method: "POST",
+        body: JSON.stringify({
+          title: document.getElementById("title").value.trim(),
+          category: document.getElementById("category").value,
+          content: document.getElementById("content").value.trim(),
+          authorId: user.id,
+        }),
+      });
+      showMsg("Blog published! Redirecting...", "success");
+      setTimeout(() => (window.location.href = "dashboard.html"), 800);
+    } catch (err) {
+      showMsg(err.message, "error");
+    }
   });
 }
 
