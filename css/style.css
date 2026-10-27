@@ -1,18 +1,50 @@
-:root {
-  --primary: #4f46e5;
-  --primary-dark: #4338ca;
-  --bg: #f4f5fb;
-  --text: #1f2937;
-  --muted: #6b7280;
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+/* :root {
+  --primary: #f97316;
+  --primary-dark: #c2410c;
+  --bg: #fff7ed;
+  --text: #111111;
+  --muted: #9a6b4b;
+  --card: #ffffff;
+  --danger: #c2410c;
+  --success: #d97706;
+  --heading: #c2410c;
+} */
+/* :root {
+  --primary: #ea580c;
+  --primary-dark: #c2410c;
+  --bg: #fff7ed;
+  --text: #292524;
+  --muted: #78716c;
   --card: #ffffff;
   --danger: #dc2626;
   --success: #16a34a;
+} */
+:root {
+  --primary: #14b8a6;
+  --primary-dark: #0f9488;
+  --bg: #f4fbfa;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --card: #ffffff;
+  --danger: #ef4444;
+  --success: #16a34a;
 }
+/* :root {
+  /* --primary: #501450;
+  --primary-dark: #130a15;
+  --bg: #e8d7f4;
+  --text: #35093c;
+  --muted: #1867c1;
+  --card: #ffffff;
+  --danger: #dc2626;
+  --success: #16a34a;
+} */ */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: "POPPINS", "EUCLID MATH TWO", Poppins, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
@@ -129,4 +161,10 @@ h2, h3 { margin-bottom: 14px; }
 @media (max-width: 600px) {
   .hero h1 { font-size: 1.6rem; }
   .nav { flex-direction: column; align-items: flex-start; }
+}
+button, input, select, textarea { font-family: inherit; }
+
+.hero h1 {
+  font-family: "poppins", fantasy;
+  letter-spacing: 1px;
 }

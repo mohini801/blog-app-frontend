@@ -45,6 +45,7 @@ function blogCard(b) {
       <h3>${escapeHTML(b.title)}</h3>
       <p class="meta">By ${escapeHTML(b.author)} &bull; ${escapeHTML(b.date)}</p>
       <p>${escapeHTML(excerpt)}</p>
+      <a class="read-more" href="blog.html?id=${b.id}">Read more &rarr;</a>
     </article>`;
 }
 
@@ -154,7 +155,25 @@ async function initDashboard() {
     box.innerHTML = `<p class="empty">${escapeHTML(err.message)}</p>`;
   }
 }
-
+async function initBlog() {
+  const box = document.getElementById("blogDetail");
+  const id = new URLSearchParams(window.location.search).get("id");
+  if (!id) {
+    box.innerHTML = `<p class="empty">Blog not found.</p>`;
+    return;
+  }
+  try {
+    const b = await api("/blogs/" + id);
+    document.title = "BlogSpace | " + b.title;
+    box.innerHTML = `
+      <span class="tag">${escapeHTML(b.category)}</span>
+      <h1>${escapeHTML(b.title)}</h1>
+      <p class="meta">By ${escapeHTML(b.author)} &bull; ${escapeHTML(b.date)}</p>
+      <div class="body">${escapeHTML(b.content)}</div>`;
+  } catch (err) {
+    box.innerHTML = `<p class="empty">${escapeHTML(err.message)}</p>`;
+  }
+}
 function initCreate() {
   requireLogin();
   const user = session.getCurrent();
@@ -190,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
     login: initLogin,
     dashboard: initDashboard,
     create: initCreate,
+    blog: initBlog,
   };
   if (pages[page]) pages[page]();
 });
